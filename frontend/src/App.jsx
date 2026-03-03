@@ -8,9 +8,9 @@ function App() {
     const [toastType, setToastType] = useState('success');
 
     const [config, setConfig] = useState({
-        url: localStorage.getItem('config_url') || '',
-        token: localStorage.getItem('config_token') || 'fackin_inventory_secret_token',
-        user: localStorage.getItem('config_user') || '管理者'
+        url: import.meta.env.VITE_APP_SCRIPT_URL || '',
+        token: import.meta.env.VITE_API_TOKEN || 'fackin_inventory_secret_token',
+        user: localStorage.getItem('config_user') || 'ゲスト'
     });
 
     const [items, setItems] = useState([]);
@@ -21,6 +21,8 @@ function App() {
     useEffect(() => {
         if (config.url) {
             syncData();
+        } else {
+            showToast('通信先が設定されていません (VITE_APP_SCRIPT_URL)', 'error');
         }
     }, [config.url]); // Sync when url becomes available
 
@@ -49,24 +51,12 @@ function App() {
         }
     };
 
-    const saveConfig = (newUrl, newToken, newUser) => {
-        const c = { url: newUrl, token: newToken, user: newUser };
+    const saveConfig = (newUser) => {
+        const c = { ...config, user: newUser };
         setConfig(c);
-        localStorage.setItem('config_url', newUrl);
-        localStorage.setItem('config_token', newToken);
         localStorage.setItem('config_user', newUser);
-        showToast('接続設定を保存しました');
+        showToast('名前を保存しました');
         setCurrentView('view-list');
-    };
-
-    const logout = () => {
-        if (confirm('接続設定をリセットしてログアウトします。よろしいですか？')) {
-            localStorage.removeItem('config_url');
-            localStorage.removeItem('config_token');
-            setConfig({ url: '', token: '', user: config.user });
-            setItems([]);
-            setCurrentView('view-list');
-        }
     };
 
     let headerTitle = "FACKIN在庫";
@@ -76,16 +66,6 @@ function App() {
 
     // Consume Modal State
     const [consumeItem, setConsumeItem] = useState(null);
-
-    // If not configured, show login screen
-    if (!config.url) {
-        return (
-            <LoginScreen
-                onLogin={saveConfig}
-                initialUser={config.user}
-            />
-        );
-    }
 
     return (
         <div className="app-container">
@@ -141,9 +121,7 @@ function App() {
                 {currentView === 'view-settings' && (
                     <AccountSettings
                         config={config}
-                        onSave={(newUser) => saveConfig(config.url, config.token, newUser)}
-                        onLogout={logout}
-                        showToast={showToast}
+                        onSave={saveConfig}
                     />
                 )}
             </main>
@@ -431,67 +409,27 @@ function ItemForm({ categories, locations, config, onCancel, onSuccess, showToas
     );
 }
 
-function LoginScreen({ onLogin, initialUser }) {
-    const [url, setUrl] = useState('');
-    const [token, setToken] = useState('fackin_inventory_secret_token');
-    const [user, setUser] = useState(initialUser || '担当者');
-
-    const submit = (e) => {
-        e.preventDefault();
-        if (!url.includes('script.google.com')) {
-            alert('正しい Web App URL を入力してください。');
-            return;
-        }
-        onLogin(url, token, user);
-    };
-
-    return (
-        <div className="login-container">
-            <div className="login-card">
-                <h2><i className="ri-lock-2-line"></i> システム接続設定</h2>
-                <p className="login-desc">初回のみ、管理者から提供された接続情報を入力してください。この情報は第三者に教えないでください。</p>
-                <form onSubmit={submit}>
-                    <div className="form-group">
-                        <label>Web App URL</label>
-                        <input type="url" required value={url} onChange={e => setUrl(e.target.value)} placeholder="https://script.google.com/macros/s/.../exec" />
-                    </div>
-                    <div className="form-group">
-                        <label>アクセスパスワード (API Token)</label>
-                        <input type="password" required value={token} onChange={e => setToken(e.target.value)} />
-                    </div>
-                    <div className="form-group">
-                        <label>あなたの名前（操作履歴用）</label>
-                        <input type="text" required value={user} onChange={e => setUser(e.target.value)} placeholder="例：山田 太郎" />
-                    </div>
-                    <button type="submit" className="btn-primary btn-block">システムに接続する</button>
-                </form>
-            </div>
-        </div>
-    );
-}
-
-function AccountSettings({ config, onSave, onLogout, showToast }) {
+function AccountSettings({ config, onSave }) {
     const [user, setUser] = useState(config.user);
 
     const handleSave = () => {
+        if (!user.trim()) {
+            alert('名前を入力してください');
+            return;
+        }
         onSave(user);
     };
 
     return (
         <div className="view active">
             <div className="settings-card">
-                <h3>アカウント情報</h3>
-                <div className="form-group">
-                    <label>現在の名前 (履歴用)</label>
-                    <input type="text" value={user} onChange={e => setUser(e.target.value)} />
+                <h3>アカウント設定</h3>
+                <p className="login-desc">在庫の登録や消費をした際に記録されるあなたの名前を設定してください。</p>
+                <div className="form-group" style={{ marginTop: '1rem' }}>
+                    <label>あなたの名前</label>
+                    <input type="text" value={user} onChange={e => setUser(e.target.value)} placeholder="例：山田太郎" />
                 </div>
-                <button className="btn-primary btn-block" onClick={handleSave}>名前を更新</button>
-            </div>
-
-            <div className="settings-card danger-zone">
-                <h3>ログアウト</h3>
-                <p className="help-text">接続設定を解除し、初期画面に戻ります。</p>
-                <button className="btn-danger btn-block" onClick={onLogout}><i className="ri-logout-box-r-line"></i> ログアウト</button>
+                <button className="btn-primary btn-block" onClick={handleSave}>名前を保存</button>
             </div>
         </div>
     );

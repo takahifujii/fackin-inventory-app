@@ -9,7 +9,7 @@ const IMAGE_FOLDER_NAME = "InventoryApp_Images";
 // 【重要】スプレッドシートのURLからIDをコピーして貼り付けてください。
 // 例: https://docs.google.com/spreadsheets/d/XXXXXXXXXXXXXXXXX/edit の XXXXXXXXXXXXXXXXX の部分
 // ※スプレッドシートから「拡張機能 > Apps Script」で開いた場合は空欄 "" のままでOKです。
-const SPREADSHEET_ID = "";
+const SPREADSHEET_ID = "19sE_E5Osly9qNntKouQEGhNLcfN6re19woh7AataE2M";
 
 // ==========================================
 // HTTP Handlers (Web App Interfaces)
@@ -388,7 +388,14 @@ function initializeSheets() {
   return { success: true, message: "Sheets initialized." };
 }
 
-function getSheetOrCreate(sheetName, headers = null) {
+function getSheetOrCreate(sheetName, passedHeaders = null) {
+  let headers = passedHeaders;
+  if (!headers) {
+    if (sheetName === "items") headers = itemsColumns;
+    else if (sheetName === "logs") headers = logsColumns;
+    else if (sheetName === "master") headers = masterColumns;
+  }
+
   let ss;
   if (SPREADSHEET_ID) {
     ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -410,7 +417,22 @@ function getSheetOrCreate(sheetName, headers = null) {
       sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#f3f3f3");
       sheet.setFrozenRows(1);
     }
+  } else if (headers && sheet.getLastRow() > 0) {
+    // 既存のシートの見出し行が存在するかチェックして、無い場合は挿入
+    const firstRow = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
+    if (firstRow[0] !== headers[0]) {
+      sheet.insertRowBefore(1);
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#f3f3f3");
+      sheet.setFrozenRows(1);
+    }
+  } else if (headers && sheet.getLastRow() === 0) {
+    // 既存のシートが完全に空の場合
+    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#f3f3f3");
+    sheet.setFrozenRows(1);
   }
+  
   return sheet;
 }
 

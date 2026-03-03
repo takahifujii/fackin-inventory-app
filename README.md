@@ -34,16 +34,23 @@
 ※ カスタマイズ:
 フロントエンドからの通信を保護するトークン（デフォルト `fackin_inventory_secret_token`）を変更したい場合は `Code.gs` の一行目を変更してください。
 
-### 2. フロントエンドの公開 (PWA)
+### 2. フロントエンドの公開 (GitHub Pages 自動デプロイ)
 
-フロントエンドは Node.js やビルドツールが不要な完全な静的ファイルです。
-`frontend/` フォルダ内のすべてのファイルを、以下のような無料ホスティングサービスにアップロードするだけで完了です：
-- GitHub Pages
-- Vercel (ドラッグ＆ドロップでデプロイ可能)
-- Firebase Hosting
-- 既存のレンタルサーバーやNASのWebサーバー
+本リポジトリには GitHub Actions の設定 (`.github/workflows/deploy.yml`) が含まれているため、GitHub にプッシュするだけで自動的に公開されます。
 
-ローカル環境（Mac等）で動作確認したい場合は以下を実行し、ブラウザで `http://localhost:8000` にアクセスします。
+1. ご自身の GitHub アカウントに空の **Public** リポジトリを作成します。
+2. ターミナルから以下のコマンドでリモートリポジトリに追加し、Pushします。
+   ```bash
+   git remote add origin https://github.com/ユーザー名/リポジトリ名.git
+   git branch -M main
+   git push -u origin main
+   ```
+3. GitHub上のリポジトリ画面から **Settings > Pages** を開きます。
+4. **Build and deployment** の Source を `GitHub Actions` に変更します。
+5. （数分後に自動でActionsが走り、デプロイが完了します）
+6. ターミナルまたはSettings>Pages画面に表示されたURL (例: `https://[ユーザー名].github.io/[リポジトリ名]`) をコピーします。
+
+※ローカル環境（PC上）で動作確認したい場合は、以下を実行しブラウザで `http://localhost:8000` にアクセスします。
 ```bash
 cd frontend
 python3 -m http.server 8000

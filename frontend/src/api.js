@@ -19,9 +19,8 @@ export const API = {
             if (payload?.item_id) params.append('item_id', payload.item_id);
             url += '?' + params.toString();
         } else {
-            options.headers = {
-                'Content-Type': 'text/plain;charset=utf-8' // GAS accepts this better
-            };
+            // Content-Type を意図的に設定しないことで、ブラウザが text/plain;charset=UTF-8 として
+            // 送信し、CORSのプリフライト(OPTIONS)リクエストを回避するテクニック（GAS特有の対策）
             options.body = JSON.stringify({
                 action: action,
                 token: config.token,

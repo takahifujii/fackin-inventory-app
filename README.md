@@ -34,26 +34,25 @@
 ※ カスタマイズ:
 フロントエンドからの通信を保護するトークン（デフォルト `fackin_inventory_secret_token`）を変更したい場合は `Code.gs` の一行目を変更してください。
 
-### 2. フロントエンドの公開 (GitHub Pages 自動デプロイ)
+### 2. フロントエンドの公開 (Render / GitHub Pages)
 
-本リポジトリには GitHub Actions の設定 (`.github/workflows/deploy.yml`) が含まれているため、GitHub にプッシュするだけで自動的に公開されます。
+本アプリのフロントエンドは **React + Vite** で構築されています。
+Node.jsのビルド環境が用意されているホスティングサービス (Render, Vercel, Netlify など) にデプロイするのが最も簡単です。
 
-1. ご自身の GitHub アカウントに空の **Public** リポジトリを作成します。
-2. ターミナルから以下のコマンドでリモートリポジトリに追加し、Pushします。
-   ```bash
-   git remote add origin https://github.com/ユーザー名/リポジトリ名.git
-   git branch -M main
-   git push -u origin main
-   ```
-3. GitHub上のリポジトリ画面から **Settings > Pages** を開きます。
-4. **Build and deployment** の Source を `GitHub Actions` に変更します。
-5. （数分後に自動でActionsが走り、デプロイが完了します）
-6. ターミナルまたはSettings>Pages画面に表示されたURL (例: `https://[ユーザー名].github.io/[リポジトリ名]`) をコピーします。
+#### Render での公開手順（推奨）
+1. Render (https://render.com) にログインし、「New」>「Static Site」を選択します。
+2. 対象の GitHub リポジトリ（`fackin-inventory-app`）を連携します。
+3. 以下の設定を入力して「Create Static Site」を押します：
+   - **Root Directory**: `frontend`
+   - **Build Command**: `npm install && npm run build`
+   - **Publish directory**: `dist`
+4. デプロイが完了すると、自動発行されたURL（例: `https://fackin-inventory-app.onrender.com`）で利用可能になります。スマホでアクセスし「ホーム画面に追加」をしてアプリ化してください。
 
-※ローカル環境（PC上）で動作確認したい場合は、以下を実行しブラウザで `http://localhost:8000` にアクセスします。
+※ ローカル開発環境で起動する場合：
 ```bash
 cd frontend
-python3 -m http.server 8000
+npm install
+npm run dev
 ```
 
 ### 3. アプリの初期化と連携

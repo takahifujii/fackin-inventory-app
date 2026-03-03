@@ -4,12 +4,14 @@ export const API = {
             throw new Error('設定からWeb App URLを登録してください');
         }
 
-        let url = config.url;
+        // S2S(サーバー間通信)回避策: SafariIのITPブロックを防ぐため、
+        // 自分のNode.jsサーバー(Render)の/apiエンドポイントを叩き、そこからGASに転送させる
+        let url = import.meta.env.DEV && config.url ? config.url : '/api';
+
         let options = {
             method: method,
-            redirect: 'follow',
-            mode: 'cors',
-            credentials: 'omit' // Safari/iOS等のITP対策（Cookie送信を止めてブロックを防ぐ）
+            redirect: 'follow', // Node->GAS proxy returns a clean response, no redirect for the browser
+            // mode: 'cors' is fine but not strictly needed for same-origin (/api)
         };
 
         if (method === 'GET') {

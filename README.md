@@ -42,11 +42,18 @@ Node.jsのビルド環境が用意されているホスティングサービス 
 #### Render での公開手順（推奨）
 1. Render (https://render.com) にログインし、「New」>「Static Site」を選択します。
 2. 対象の GitHub リポジトリ（`fackin-inventory-app`）を連携します。
-3. 以下の設定を入力して「Create Static Site」を押します：
+3. 以下の設定を入力します：
    - **Root Directory**: `frontend`
    - **Build Command**: `npm install && npm run build`
    - **Publish directory**: `dist`
-4. デプロイが完了すると、自動発行されたURL（例: `https://fackin-inventory-app.onrender.com`）で利用可能になります。スマホでアクセスし「ホーム画面に追加」をしてアプリ化してください。
+4. **【重要】Environment Variables (環境変数) の設定**
+   「Advanced」を開き（または「Environment Variables」欄から）、「Add Environment Variable」を押して以下を追加します：
+   - Key: `VITE_APP_SCRIPT_URL`
+   - Value: 先ほど取得した Apps Script の Web App URL (`https://script.google.com/macros/s/.../exec`)
+5. 「Create Static Site」を押します。
+6. デプロイが完了すると、自動発行されたURL（例: `https://fackin-inventory-app.onrender.com`）で利用可能になります。スマホでアクセスし「ホーム画面に追加」をしてアプリ化してください。
+
+従業員の方は、アプリ（URL）を開くだけですぐに在庫一覧や登録画面を使うことができます。危険な設定画面（シートの初期化など）はこのアプリ層から完全に削除されているので安全です。
 
 ※ ローカル開発環境で起動する場合：
 ```bash

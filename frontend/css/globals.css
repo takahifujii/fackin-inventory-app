@@ -1,0 +1,84 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    line-height: 1.5;
+    font-size: 16px;
+    overflow-x: hidden;
+    overscroll-behavior-y: none;
+    /* Prevents pull-to-refresh on mobile if we want an app feel */
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+ul {
+    list-style: none;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+input,
+button,
+select,
+textarea {
+    font-family: inherit;
+    font-size: 16px;
+    /* Prevents iOS zoom */
+}
+
+/* Utilities */
+.hidden {
+    display: none !important;
+}
+
+.text-danger {
+    color: var(--danger);
+}
+
+.text-warning {
+    color: var(--warning);
+}
+
+.text-success {
+    color: var(--success);
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+.bg-danger {
+    background-color: var(--danger);
+}
+
+.bg-warning {
+    background-color: var(--warning);
+}
+
+.bg-success {
+    background-color: var(--success);
+}

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1a1a2e">
+  <title>FACKIN在庫管理</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+  
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/globals.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/layout.css">
+</head>
+<body>
+  
+  <!-- Global Toast / Loader Overlay -->
+  <div id="loader-overlay" class="loader-overlay hidden">
+    <div class="spinner"></div>
+  </div>
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Main App Container -->
+  <div id="app" class="app-container">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <h1 id="header-title">FACKIN在庫</h1>
+      <button class="icon-btn" id="btn-sync" aria-label="Sync Database">
+        <i class="ri-refresh-line"></i>
+      </button>
+    </header>
+    
+    <!-- Views container -->
+    <main class="app-content">
+      
+      <!-- View: List -->
+      <section id="view-list" class="view active">
+        <div class="search-bar">
+          <i class="ri-search-line"></i>
+          <input type="text" id="search-input" placeholder="品目、カテゴリ、場所を検索">
+          <button id="btn-filter" class="icon-btn"><i class="ri-filter-3-line"></i></button>
+        </div>
+        
+        <!-- Filter Bar (Hidden by default) -->
+        <div id="filter-panel" class="filter-panel hidden">
+          <select id="filter-category"><option value="">すべてのカテゴリ</option></select>
+          <select id="filter-location"><option value="">すべての場所</option></select>
+          <label class="checkbox-label">
+            <input type="checkbox" id="filter-threshold"> 要発注のみ
+          </label>
+        </div>
+        
+        <div id="inventory-list" class="inventory-list">
+          <!-- Items will be injected here via JS -->
+          <div class="empty-state">
+            <i class="ri-inbox-archive-line"></i>
+            <p>データがありません。<br>同期するか新しく登録してください。</p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- View: Detail -->
+      <section id="view-detail" class="view hidden">
+        <!-- Injected via JS -->
+      </section>
+
+      <!-- View: Add/Edit Form -->
+      <section id="view-form" class="view hidden">
+        <div class="form-container">
+          <h2 id="form-title" class="section-title">新規在庫登録</h2>
+          <form id="item-form" autocomplete="off">
+            <input type="hidden" id="form-item-id">
+            
+            <div class="form-group photo-upload-group">
+              <label>写真<span class="optional">(任意)</span></label>
+              <div class="photo-preview-box" id="photo-preview-box">
+                <i class="ri-camera-lens-line"></i>
+                <span>タップして撮影/選択</span>
+                <img id="form-photo-preview" class="hidden" alt="Preview">
+              </div>
+              <input type="file" id="form-photo" accept="image/*" capture="environment" class="hidden">
+            </div>
+
+            <div class="form-group">
+              <label for="form-name">品目名<span class="required">*</span></label>
+              <input type="text" id="form-name" required placeholder="例：塩ビパイプ VP-20">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="form-category">カテゴリ</label>
+                <div class="input-with-action">
+                  <select id="form-category"></select>
+                  <button type="button" class="btn-text-small" onclick="promptNewMaster('category')">+ 追加</button>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="form-location">保管場所</label>
+                <div class="input-with-action">
+                  <select id="form-location"></select>
+                  <button type="button" class="btn-text-small" onclick="promptNewMaster('location')">+ 追加</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="form-qty">数量<span class="required">*</span></label>
+                <input type="number" id="form-qty" required min="0" value="0">
+              </div>
+              
+              <div class="form-group">
+                <label for="form-unit">単位</label>
+                <input type="text" id="form-unit" value="個" placeholder="例：個, m, 箱">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="form-threshold">要発注ライン (この数以下で警告)</label>
+              <input type="number" id="form-threshold" min="0" placeholder="例：5">
+            </div>
+            
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="form-add-if-exists" checked>
+                同じ品名があれば別ロットにせず「加算」する
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label for="form-note">メモ (操作履歴に残ります)</label>
+              <input type="text" id="form-note" placeholder="仕入先、現場名など">
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" id="btn-cancel-form">キャンセル</button>
+              <button type="submit" class="btn-primary" id="btn-submit-form">登録する</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- View: Settings -->
+      <section id="view-settings" class="view hidden">
+        <h2 class="section-title">設定</h2>
+        
+        <div class="settings-card">
+          <div class="form-group">
+            <label for="config-url">Apps Script Web App URL<span class="required">*</span></label>
+            <input type="url" id="config-url" placeholder="https://script.google.com/macros/s/.../exec">
+            <p class="help-text">Google Sheets側でデプロイしたURL</p>
+          </div>
+          <div class="form-group">
+            <label for="config-token">API Token</label>
+            <input type="text" id="config-token" placeholder="fackin_inventory_secret_token" value="fackin_inventory_secret_token">
+          </div>
+          <div class="form-group">
+            <label for="config-user">ユーザー名 (履歴用)</label>
+            <input type="text" id="config-user" placeholder="例：管理者">
+          </div>
+          <button id="btn-save-settings" class="btn-primary btn-block">設定を保存</button>
+        </div>
+
+        <div class="settings-card danger-zone">
+          <h3>危険な操作</h3>
+          <p class="help-text">Spreadsheetのシート初期化を行います（マスタデータ構築等）</p>
+          <button id="btn-init-sheets" class="btn-danger btn-block">シートを初期化する</button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <a href="#" class="nav-item active" data-target="view-list">
+        <i class="ri-list-check-2"></i>
+        <span>在庫一覧</span>
+      </a>
+      <a href="#" class="nav-item nav-fab" data-target="view-form">
+        <div class="fab">
+          <i class="ri-add-line"></i>
+        </div>
+      </a>
+      <a href="#" class="nav-item" data-target="view-settings">
+        <i class="ri-settings-4-line"></i>
+        <span>設定</span>
+      </a>
+    </nav>
+    
+  </div>
+
+  <!-- Modal for Consume -->
+  <div id="modal-consume" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3>消費・使用登録</h3>
+      <p id="consume-item-name" class="modal-subtitle">品目名</p>
+      <div class="form-group">
+        <label>現在の在庫: <strong id="consume-current-qty">0</strong> <span id="consume-unit">個</span></label>
+      </div>
+      <div class="form-group">
+        <label for="consume-qty-input">使用する数</label>
+        <div class="input-stepper">
+          <button type="button" id="btn-consume-minus"><i class="ri-subtract-line"></i></button>
+          <input type="number" id="consume-qty-input" value="1" min="1">
+          <button type="button" id="btn-consume-plus"><i class="ri-add-line"></i></button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="consume-note-input">メモ(現場名など)</label>
+        <input type="text" id="consume-note-input" placeholder="任意">
+      </div>
+      <div class="modal-actions">
+        <button id="btn-consume-cancel" class="btn-text">キャンセル</button>
+        <button id="btn-consume-confirm" class="btn-primary">消費する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('SW Registered!', reg))
+          .catch(err => console.error('SW Registration failed', err));
+      });
+    }
+  </script>
+</body>
+</html>

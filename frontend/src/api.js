@@ -7,7 +7,9 @@ export const API = {
         let url = config.url;
         let options = {
             method: method,
-            redirect: 'follow'
+            redirect: 'follow',
+            mode: 'cors',
+            credentials: 'omit' // Safari/iOS等のITP対策（Cookie送信を止めてブロックを防ぐ）
         };
 
         if (method === 'GET') {

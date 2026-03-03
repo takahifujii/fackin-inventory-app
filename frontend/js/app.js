@@ -17,7 +17,7 @@ const App = {
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-                const target = e.currentTarget.getAttribute('data-target');
+                const target = e.currentTarget.getAttribute('data-target'); console.log("clicked", target);
                 this.switchView(target);
             });
         });

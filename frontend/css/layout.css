@@ -135,6 +135,7 @@
     background: linear-gradient(135deg, var(--primary-hover), var(--primary));
 }
 
+.nav-fab *, .nav-item * { pointer-events: none; }
 .nav-fab i {
     font-size: 2rem;
     margin: 0;

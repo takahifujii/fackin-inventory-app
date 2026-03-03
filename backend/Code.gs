@@ -6,6 +6,11 @@ const API_TOKEN = "fackin_inventory_secret_token";
 // 画像を保存するGoogleドライブのフォルダ名
 const IMAGE_FOLDER_NAME = "InventoryApp_Images";
 
+// 【重要】スプレッドシートのURLからIDをコピーして貼り付けてください。
+// 例: https://docs.google.com/spreadsheets/d/XXXXXXXXXXXXXXXXX/edit の XXXXXXXXXXXXXXXXX の部分
+// ※スプレッドシートから「拡張機能 > Apps Script」で開いた場合は空欄 "" のままでOKです。
+const SPREADSHEET_ID = "";
+
 // ==========================================
 // HTTP Handlers (Web App Interfaces)
 // ==========================================
@@ -384,7 +389,17 @@ function initializeSheets() {
 }
 
 function getSheetOrCreate(sheetName, headers = null) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let ss;
+  if (SPREADSHEET_ID) {
+    ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  } else {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  }
+  
+  if (!ss) {
+    throw new Error("スプレッドシートが見つかりません。Code.gsの7行目にある SPREADSHEET_ID にスプレッドシートのIDを入力してください。");
+  }
+
   let sheet = ss.getSheetByName(sheetName);
   
   if (!sheet) {

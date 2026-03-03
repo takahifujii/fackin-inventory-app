@@ -348,7 +348,7 @@ function saveImageToDrive(base64Data, filename) {
   
   // スマホから直接表示できるURL(WebContentLink or Thumbnail)を返すのがPWAには適している
   // 代替手段として https://drive.google.com/uc?id=[FILE_ID] が汎用的に使える
-  return \`https://drive.google.com/uc?id=\${file.getId()}\`;
+  return `https://drive.google.com/uc?id=${file.getId()}`;
 }
 
 // ==========================================

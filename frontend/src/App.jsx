@@ -21,11 +21,8 @@ function App() {
     useEffect(() => {
         if (config.url) {
             syncData();
-        } else {
-            showToast('設定画面から Web App URL を登録してください', 'error');
-            setCurrentView('view-settings');
         }
-    }, []); // Only on mount
+    }, [config.url]); // Sync when url becomes available
 
     const showToast = (message, type = 'success') => {
         setToastMessage(message);
@@ -58,30 +55,37 @@ function App() {
         localStorage.setItem('config_url', newUrl);
         localStorage.setItem('config_token', newToken);
         localStorage.setItem('config_user', newUser);
-        showToast('設定を保存しました');
+        showToast('接続設定を保存しました');
         setCurrentView('view-list');
-        // We intentionally don't await this so UI feels fast
-        if (newUrl) {
-            setLoading(true);
-            Promise.all([API.getItems(c), API.getMaster(c)]).then(([_items, _master]) => {
-                setItems(_items || []);
-                setCategories(_master?.categories || []);
-                setLocations(_master?.locations || []);
-                setLoading(false);
-            }).catch(e => {
-                showToast('通信エラー: ' + e.message, 'error');
-                setLoading(false);
-            });
+    };
+
+    const logout = () => {
+        if (confirm('接続設定をリセットしてログアウトします。よろしいですか？')) {
+            localStorage.removeItem('config_url');
+            localStorage.removeItem('config_token');
+            setConfig({ url: '', token: '', user: config.user });
+            setItems([]);
+            setCurrentView('view-list');
         }
     };
 
     let headerTitle = "FACKIN在庫";
     if (currentView === 'view-list') headerTitle = "在庫一覧";
     if (currentView === 'view-form') headerTitle = "新規登録";
-    if (currentView === 'view-settings') headerTitle = "設定";
+    if (currentView === 'view-settings') headerTitle = "アカウント";
 
     // Consume Modal State
     const [consumeItem, setConsumeItem] = useState(null);
+
+    // If not configured, show login screen
+    if (!config.url) {
+        return (
+            <LoginScreen
+                onLogin={saveConfig}
+                initialUser={config.user}
+            />
+        );
+    }
 
     return (
         <div className="app-container">
@@ -135,10 +139,10 @@ function App() {
                 )}
 
                 {currentView === 'view-settings' && (
-                    <Settings
-                        initialConfig={config}
-                        onSave={saveConfig}
-                        setLoading={setLoading}
+                    <AccountSettings
+                        config={config}
+                        onSave={(newUser) => saveConfig(config.url, config.token, newUser)}
+                        onLogout={logout}
                         showToast={showToast}
                     />
                 )}
@@ -169,8 +173,8 @@ function App() {
                     </div>
                 </button>
                 <button className={`nav-item ${currentView === 'view-settings' ? 'active' : ''}`} onClick={() => setCurrentView('view-settings')}>
-                    <i className="ri-settings-4-line"></i>
-                    <span>設定</span>
+                    <i className="ri-user-settings-line"></i>
+                    <span>アカウント</span>
                 </button>
             </nav>
         </div>
@@ -427,47 +431,67 @@ function ItemForm({ categories, locations, config, onCancel, onSuccess, showToas
     );
 }
 
-function Settings({ initialConfig, onSave, setLoading, showToast }) {
-    const [url, setUrl] = useState(initialConfig.url);
-    const [token, setToken] = useState(initialConfig.token);
-    const [user, setUser] = useState(initialConfig.user);
+function LoginScreen({ onLogin, initialUser }) {
+    const [url, setUrl] = useState('');
+    const [token, setToken] = useState('fackin_inventory_secret_token');
+    const [user, setUser] = useState(initialUser || '担当者');
 
-    const initSheets = async () => {
-        if (confirm('スプレッドシートの初期セットアップ（シート作成など）を行います。よろしいですか？')) {
-            setLoading(true);
-            try {
-                await API.initSheets({ url, token, user });
-                showToast('初期化が完了しました。');
-            } catch (e) {
-                showToast('初期化に失敗: ' + e.message, 'error');
-            } finally {
-                setLoading(false);
-            }
+    const submit = (e) => {
+        e.preventDefault();
+        if (!url.includes('script.google.com')) {
+            alert('正しい Web App URL を入力してください。');
+            return;
         }
+        onLogin(url, token, user);
+    };
+
+    return (
+        <div className="login-container">
+            <div className="login-card">
+                <h2><i className="ri-lock-2-line"></i> システム接続設定</h2>
+                <p className="login-desc">初回のみ、管理者から提供された接続情報を入力してください。この情報は第三者に教えないでください。</p>
+                <form onSubmit={submit}>
+                    <div className="form-group">
+                        <label>Web App URL</label>
+                        <input type="url" required value={url} onChange={e => setUrl(e.target.value)} placeholder="https://script.google.com/macros/s/.../exec" />
+                    </div>
+                    <div className="form-group">
+                        <label>アクセスパスワード (API Token)</label>
+                        <input type="password" required value={token} onChange={e => setToken(e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                        <label>あなたの名前（操作履歴用）</label>
+                        <input type="text" required value={user} onChange={e => setUser(e.target.value)} placeholder="例：山田 太郎" />
+                    </div>
+                    <button type="submit" className="btn-primary btn-block">システムに接続する</button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+function AccountSettings({ config, onSave, onLogout, showToast }) {
+    const [user, setUser] = useState(config.user);
+
+    const handleSave = () => {
+        onSave(user);
     };
 
     return (
         <div className="view active">
             <div className="settings-card">
+                <h3>アカウント情報</h3>
                 <div className="form-group">
-                    <label>Apps Script Web App URL<span className="required">*</span></label>
-                    <input type="url" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://script.google.com/macros/s/.../exec" />
-                </div>
-                <div className="form-group">
-                    <label>API Token</label>
-                    <input type="text" value={token} onChange={e => setToken(e.target.value)} />
-                </div>
-                <div className="form-group">
-                    <label>ユーザー名 (履歴用)</label>
+                    <label>現在の名前 (履歴用)</label>
                     <input type="text" value={user} onChange={e => setUser(e.target.value)} />
                 </div>
-                <button className="btn-primary btn-block" onClick={() => onSave(url, token, user)}>設定を保存</button>
+                <button className="btn-primary btn-block" onClick={handleSave}>名前を更新</button>
             </div>
 
             <div className="settings-card danger-zone">
-                <h3>危険な操作</h3>
-                <p className="help-text">Spreadsheetのシート初期化を行います</p>
-                <button className="btn-danger btn-block" onClick={initSheets}>シートを初期化する</button>
+                <h3>ログアウト</h3>
+                <p className="help-text">接続設定を解除し、初期画面に戻ります。</p>
+                <button className="btn-danger btn-block" onClick={onLogout}><i className="ri-logout-box-r-line"></i> ログアウト</button>
             </div>
         </div>
     );

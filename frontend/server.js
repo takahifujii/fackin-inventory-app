@@ -19,9 +19,10 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // Proxy endpoint for API requests
 app.all('/api', async (req, res) => {
     try {
-        let gasUrl = req.header('x-gas-url');
-        if (gasUrl) {
-            gasUrl = decodeURI(gasUrl);
+        let gasUrl = '';
+        const b64Url = req.header('x-gas-url-b64');
+        if (b64Url) {
+            gasUrl = Buffer.from(b64Url, 'base64').toString('utf8');
         } else {
             gasUrl = process.env.VITE_APP_SCRIPT_URL?.trim();
         }

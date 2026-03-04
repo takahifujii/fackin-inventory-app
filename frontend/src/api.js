@@ -12,13 +12,16 @@ export const API = {
         const cleanUrl = config.url ? config.url.trim() : '';
         const cleanToken = config.token ? config.token.trim() : '';
 
+        // S2S(サーバー間通信)回避策: Renderのプロキシに本来のGAS URLを伝える
+        // Safariの厳格なHTTP Headerバリデーション（改行やマルチバイト文字によるDOMExceptionクラッシュ）を完全に防ぐため、
+        // URL全体を安全な文字（Base64）に変換してから送る。
+        const safeUrlBase64 = cleanUrl ? btoa(unescape(encodeURIComponent(cleanUrl))) : '';
+
         let options = {
             method: method,
             redirect: 'follow', // Node->GAS proxy returns a clean response, no redirect for the browser
             headers: {
-                // S2S(サーバー間通信)回避策: Renderのプロキシに本来のGAS URLを伝える
-                // URLに日本語等のマルチバイト文字や不正文字が含まれるとSafariがDOMExceptionでクラッシュするためencodeURIする
-                'X-GAS-URL': encodeURI(cleanUrl)
+                'X-GAS-URL-B64': safeUrlBase64
             }
         };
 

@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_NAME = 'inventory-app-v3';
+const CACHE_NAME = 'inventory-app-v4';
 const ASSETS = [
     './',
     './index.html',
@@ -17,6 +17,7 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
+    self.skipWaiting(); // Force the waiting service worker to become the active service worker.
     e.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             return cache.addAll(ASSETS);
@@ -26,28 +27,19 @@ self.addEventListener('install', (e) => {
 
 self.addEventListener('fetch', (e) => {
     // Never cache API calls (POST or App Script GETs with token)
-    if (e.request.url.includes('script.google.com') || e.request.method === 'POST') {
+    if (e.request.url.includes('script.google.com') || e.request.url.includes('/api') || e.request.method === 'POST') {
         return;
     }
 
     e.respondWith(
         caches.match(e.request).then((response) => {
-            // Return cached response if found
-            if (response) {
-                return response;
-            }
-
-            // Else fetch network request
-            return fetch(e.request).catch(() => {
-                // Optional offline fallback logic here
-                console.log('Offline and not in cache:', e.request.url);
-            });
+            if (response) return response;
+            return fetch(e.request).catch(() => console.log('Offline:', e.request.url));
         })
     );
 });
 
 self.addEventListener('activate', (e) => {
-    // Clean up old caches
     e.waitUntil(
         caches.keys().then((keyList) => {
             return Promise.all(keyList.map((key) => {
@@ -55,6 +47,6 @@ self.addEventListener('activate', (e) => {
                     return caches.delete(key);
                 }
             }));
-        })
+        }).then(() => self.clients.claim()) // Force all clients to use the new service worker immediately.
     );
 });

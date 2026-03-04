@@ -17,7 +17,8 @@ export const API = {
             redirect: 'follow', // Node->GAS proxy returns a clean response, no redirect for the browser
             headers: {
                 // S2S(サーバー間通信)回避策: Renderのプロキシに本来のGAS URLを伝える
-                'X-GAS-URL': cleanUrl
+                // URLに日本語等のマルチバイト文字や不正文字が含まれるとSafariがDOMExceptionでクラッシュするためencodeURIする
+                'X-GAS-URL': encodeURI(cleanUrl)
             }
         };
 

@@ -18,7 +18,13 @@ app.use(express.json());
 // Proxy endpoint for API requests
 app.all('/api', async (req, res) => {
     try {
-        const gasUrl = req.header('x-gas-url') || process.env.VITE_APP_SCRIPT_URL?.trim();
+        let gasUrl = req.header('x-gas-url');
+        if (gasUrl) {
+            gasUrl = decodeURI(gasUrl);
+        } else {
+            gasUrl = process.env.VITE_APP_SCRIPT_URL?.trim();
+        }
+
         if (!gasUrl) {
             return res.status(400).json({ status: 'error', data: { error: '設定でWeb App URLを登録してください。(Missing X-GAS-URL)' } });
         }

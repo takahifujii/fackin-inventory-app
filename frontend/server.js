@@ -34,34 +34,40 @@ app.all('/api', async (req, res) => {
         // Construct original options
         const fetchOptions = {
             method: req.method,
-            redirect: 'follow', // Server-to-server follow redirect is fine
+            redirect: 'manual', // Do not follow automatically to prevent header bleed bugs in Node native fetch
             headers: {}
         };
 
         let targetUrl = gasUrl;
 
         if (req.method === 'GET') {
-            // Forward GET params
             const query = new URLSearchParams(req.query).toString();
             if (query) {
                 targetUrl += '?' + query;
             }
         } else if (req.method === 'POST') {
-            // Forward POST payload. It comes in as parsed text or object from express middlewares.
-            // But we can just forward it as JSON string like the original client did to GAS.
             let bodyToSend = req.body;
             if (typeof bodyToSend === 'object') {
                 bodyToSend = JSON.stringify(bodyToSend);
             }
-
             fetchOptions.body = bodyToSend;
-            fetchOptions.headers['Content-Type'] = 'text/plain;charset=utf-8'; // For GAS simple request format
+            fetchOptions.headers['Content-Type'] = 'text/plain;charset=utf-8';
         }
 
         console.log(`[Proxy] Forwarding ${req.method} request to GAS...`);
-        const response = await fetch(targetUrl, fetchOptions);
+        let response = await fetch(targetUrl, fetchOptions);
 
-        // GAS typically returns JSON in our setup
+        // GAS returns 302 redirect to a script.googleusercontent.com URL with the final payload
+        if (response.status >= 300 && response.status < 400 && response.headers.has('location')) {
+            const redirectUrl = response.headers.get('location');
+            console.log(`[Proxy] Following redirect cleanly to: ${redirectUrl.substring(0, 50)}...`);
+
+            // IMPORTANT: Make a pure GET request with NO headers to prevent Google 404 rejections
+            response = await fetch(redirectUrl, {
+                method: 'GET'
+            });
+        }
+
         const textData = await response.text();
 
         let jsonData;

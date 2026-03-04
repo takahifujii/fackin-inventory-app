@@ -11,7 +11,10 @@ export const API = {
         let options = {
             method: method,
             redirect: 'follow', // Node->GAS proxy returns a clean response, no redirect for the browser
-            // mode: 'cors' is fine but not strictly needed for same-origin (/api)
+            headers: {
+                // S2S(サーバー間通信)回避策: Renderのプロキシに本来のGAS URLを伝える
+                'X-GAS-URL': config.url
+            }
         };
 
         if (method === 'GET') {
@@ -25,9 +28,7 @@ export const API = {
         } else {
             // Safari/iOSでのCORSエラー(Fetch API Load failed)を防ぐため、
             // 明示的に text/plain を指定してシンプルリクエストとして処理させる
-            options.headers = {
-                'Content-Type': 'text/plain;charset=utf-8'
-            };
+            options.headers['Content-Type'] = 'text/plain;charset=utf-8';
             options.body = JSON.stringify({
                 action: action,
                 token: config.token,

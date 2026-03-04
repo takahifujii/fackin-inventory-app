@@ -14,6 +14,7 @@ app.use(cors());
 // Parse text/plain or JSON bodies with a larger limit for image uploads
 app.use(express.text({ type: 'text/plain', limit: '50mb' }));
 app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Proxy endpoint for API requests
 app.all('/api', async (req, res) => {

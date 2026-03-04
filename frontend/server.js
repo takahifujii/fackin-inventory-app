@@ -18,7 +18,7 @@ app.use(express.json());
 // Proxy endpoint for API requests
 app.all('/api', async (req, res) => {
     try {
-        const gasUrl = process.env.VITE_APP_SCRIPT_URL;
+        const gasUrl = process.env.VITE_APP_SCRIPT_URL?.trim();
         if (!gasUrl) {
             return res.status(500).json({ error: 'Server configuration error: VITE_APP_SCRIPT_URL is missing' });
         }

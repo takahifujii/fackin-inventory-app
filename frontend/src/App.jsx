@@ -301,7 +301,7 @@ function ItemForm({ categories, locations, config, onCancel, onSuccess, showToas
         setLoading(true);
         try {
             let base64 = await API.fileToBase64(photoFile);
-            base64 = await API.resizeImage(base64, 1024);
+            base64 = await API.resizeImage(base64, 800);
 
             await API.createItem({
                 ...formData,

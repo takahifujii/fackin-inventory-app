@@ -41,13 +41,31 @@ export const API = {
         }
 
         const response = await fetch(url, options);
-        const data = await response.json();
+        let data;
+        let responseText = await response.text();
 
-        if (data.status === 'error') {
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            // Safari throws DOMException "The string did not match the expected pattern" when response.json() is called on HTML.
+            // By parsing manually, we can catch the error and analyze the HTML response from Google.
+            let errorPreview = responseText.substring(0, 100).replace(/<[^>]*>?/gm, ''); // strip HTML tags
+            if (responseText.includes('Page Not Found') || responseText.includes('ページが見つかりません') || responseText.includes('file does not exist')) {
+                throw new Error("🚨設定エラー: Google Apps ScriptのURLが間違っているか、ファイルが削除されています。設定画面を確認してください。");
+            } else if (responseText.includes('Sign in') || responseText.includes('ログイン') || responseText.includes('accounts.google.com')) {
+                throw new Error("🚨権限エラー: Google Apps Scriptのアクセスできるユーザーが「全員」に設定されていません。GASのデプロイ設定を見直してください。");
+            } else if (response.status >= 500) {
+                throw new Error(`🚨サーバーエラー(${response.status}): ${errorPreview}`);
+            } else {
+                throw new Error(`🚨予期せぬ応答(${response.status}): GAS URLが正しくないか、Google側でエラーが起きています。\n詳細: ${errorPreview}`);
+            }
+        }
+
+        if (data && data.status === 'error') {
             throw new Error(data.data.error || '不明なエラー');
         }
 
-        return data.data;
+        return data ? data.data : null;
     },
 
     initSheets: (config) => API.request('init', 'POST', {}, config),

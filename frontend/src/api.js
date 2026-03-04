@@ -8,19 +8,23 @@ export const API = {
         // 自分のNode.jsサーバー(Render)の/apiエンドポイントを叩き、そこからGASに転送させる
         let url = import.meta.env.DEV && config.url ? config.url : '/api';
 
+        // Header values cannot contain newlines or trailing spaces, else Safari throws "DOMException: The string did not match the expected pattern"
+        const cleanUrl = config.url ? config.url.trim() : '';
+        const cleanToken = config.token ? config.token.trim() : '';
+
         let options = {
             method: method,
             redirect: 'follow', // Node->GAS proxy returns a clean response, no redirect for the browser
             headers: {
                 // S2S(サーバー間通信)回避策: Renderのプロキシに本来のGAS URLを伝える
-                'X-GAS-URL': config.url
+                'X-GAS-URL': cleanUrl
             }
         };
 
         if (method === 'GET') {
             const params = new URLSearchParams({
                 action: action,
-                token: config.token
+                token: cleanToken
             });
             if (payload?.id) params.append('id', payload.id);
             if (payload?.item_id) params.append('item_id', payload.item_id);
@@ -31,7 +35,7 @@ export const API = {
             options.headers['Content-Type'] = 'text/plain;charset=utf-8';
             options.body = JSON.stringify({
                 action: action,
-                token: config.token,
+                token: cleanToken,
                 payload: payload
             });
         }

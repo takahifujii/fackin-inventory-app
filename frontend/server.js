@@ -11,9 +11,9 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-// Parse text/plain or JSON bodies
-app.use(express.text({ type: 'text/plain' }));
-app.use(express.json());
+// Parse text/plain or JSON bodies with a larger limit for image uploads
+app.use(express.text({ type: 'text/plain', limit: '50mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 // Proxy endpoint for API requests
 app.all('/api', async (req, res) => {

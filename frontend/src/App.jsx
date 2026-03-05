@@ -232,10 +232,18 @@ function InventoryList({ items, categories, locations, onConsume }) {
                             if (!url) return null;
                             const match = url.match(/id=([a-zA-Z0-9_-]+)/);
                             // Bypass all Google blocks by downloading the image natively via the Render backend
-                            const apiUrlPrefix = import.meta.env.DEV ? 'https://fackin-inventory-app.onrender.com' : '';
+                            const apiUrlPrefix = import.meta.env.DEV ? 'http://localhost:3000' : 'https://fackin-inventory-app-api.onrender.com';
                             return match ? `${apiUrlPrefix}/api/image/${match[1]}` : url;
                         };
-                        const firstImgRaw = item.photo_urls ? item.photo_urls.split(',')[0] : null;
+
+                        // Support both the old photo_urls string and the new JSON array photo_meta schema (item.photos)
+                        let firstImgRaw = null;
+                        if (item.photos && item.photos.length > 0 && item.photos[0] && item.photos[0].url) {
+                            firstImgRaw = item.photos[0].url;
+                        } else if (item.photo_urls) {
+                            firstImgRaw = item.photo_urls.split(',')[0];
+                        }
+
                         const firstImg = getDriveDisplayUrl(firstImgRaw);
 
                         return (

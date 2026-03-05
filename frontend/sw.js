@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_NAME = 'inventory-app-v8';
+const CACHE_NAME = 'inventory-app-v9';
 const ASSETS = [
     './',
     './index.html',

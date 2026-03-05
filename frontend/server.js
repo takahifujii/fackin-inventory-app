@@ -86,6 +86,39 @@ app.all('/api', async (req, res) => {
     }
 });
 
+// Reverse Proxy for Google Drive Images (Bypasses Browser CORP/CORS restrictions entirely)
+app.get('/api/image/:id', async (req, res) => {
+    try {
+        const fileId = req.params.id;
+        if (!fileId) return res.status(400).send('Missing file ID');
+
+        const driveUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+
+        // Node 18 fetch natively follows redirects up to 20 times by default
+        const response = await fetch(driveUrl);
+
+        if (!response.ok) {
+            console.error(`[Image Proxy] Failed to fetch image ${fileId}: Status ${response.status}`);
+            return res.status(response.status).send('Failed to fetch image');
+        }
+
+        // Forward content-type and cache instructions
+        const contentType = response.headers.get('content-type') || 'image/jpeg';
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache aggressively for 1 year
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'); // Explicitly authorize usage
+
+        // Convert web stream to buffer and send
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        res.status(200).send(buffer);
+
+    } catch (error) {
+        console.error(`[Image Proxy Error] ${req.params.id}:`, error);
+        res.status(500).send('Internal Server Error while proxying image');
+    }
+});
+
 // Serve static React files from dist/ (created by Vite)
 app.use(express.static(path.join(__dirname, 'dist')));
 

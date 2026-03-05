@@ -231,7 +231,9 @@ function InventoryList({ items, categories, locations, onConsume }) {
                         const getDriveDisplayUrl = (url) => {
                             if (!url) return null;
                             const match = url.match(/id=([a-zA-Z0-9_-]+)/);
-                            return match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : url;
+                            // Bypass all Google blocks by downloading the image natively via the Render backend
+                            const apiUrlPrefix = import.meta.env.DEV ? 'https://fackin-inventory-app.onrender.com' : '';
+                            return match ? `${apiUrlPrefix}/api/image/${match[1]}` : url;
                         };
                         const firstImgRaw = item.photo_urls ? item.photo_urls.split(',')[0] : null;
                         const firstImg = getDriveDisplayUrl(firstImgRaw);

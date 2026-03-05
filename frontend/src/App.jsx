@@ -228,7 +228,13 @@ function InventoryList({ items, categories, locations, onConsume }) {
                     filteredItems.map(item => {
                         const isOut = Number(item.qty) <= 0;
                         const isWarning = item.threshold && Number(item.qty) <= Number(item.threshold);
-                        const firstImg = item.photo_urls ? item.photo_urls.split(',')[0] : null;
+                        const getDriveDisplayUrl = (url) => {
+                            if (!url) return null;
+                            const match = url.match(/id=([a-zA-Z0-9_-]+)/);
+                            return match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : url;
+                        };
+                        const firstImgRaw = item.photo_urls ? item.photo_urls.split(',')[0] : null;
+                        const firstImg = getDriveDisplayUrl(firstImgRaw);
 
                         return (
                             <div key={item.item_id} className={`item-card ${isOut ? 'is-out' : ''}`}>

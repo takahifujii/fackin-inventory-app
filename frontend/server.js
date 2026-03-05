@@ -78,6 +78,49 @@ app.all('/api', async (req, res) => {
             return res.status(response.status).send(textData);
         }
 
+        /*
+         * Normalize image fields for backward compatibility.
+         *
+         * Older versions of the GAS backend return a comma-separated
+         * `photo_urls` string. The newer frontend expects a `photo_meta`
+         * array, where each element contains a Google Drive `file_id`
+         * and a proxied URL (`/api/image/<file_id>`). If `photo_meta` is
+         * missing but `photo_urls` is present, extract the file IDs from
+         * each URL and build a `photo_meta` array on the fly. This allows
+         * the frontend to display images without requiring changes to the
+         * GAS backend or the data schema.
+         */
+        try {
+            if (jsonData && jsonData.status === 'success' && Array.isArray(jsonData.data)) {
+                jsonData.data = jsonData.data.map(item => {
+                    if (!item.photo_meta && item.photo_urls) {
+                        const urls = item.photo_urls.split(',').map(u => u.trim()).filter(Boolean);
+                        const photos = [];
+                        for (const u of urls) {
+                            // Extract the Drive file ID from patterns like
+                            // https://drive.google.com/uc?id=FILE_ID or
+                            // https://drive.google.com/uc?export=view&id=FILE_ID
+                            const match = /id=([^&]+)/.exec(u);
+                            const fileId = match ? match[1] : null;
+                            if (fileId) {
+                                photos.push({
+                                    file_id: fileId,
+                                    url: `/api/image/${fileId}`,
+                                    name: ''
+                                });
+                            }
+                        }
+                        if (photos.length) {
+                            item.photo_meta = photos;
+                        }
+                    }
+                    return item;
+                });
+            }
+        } catch (e) {
+            console.error('[Proxy] Failed to normalize photo metadata:', e);
+        }
+
         res.status(response.status).json(jsonData);
 
     } catch (error) {

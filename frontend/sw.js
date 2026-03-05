@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_NAME = 'inventory-app-v7';
+const CACHE_NAME = 'inventory-app-v8';
 const ASSETS = [
     './',
     './index.html',
@@ -26,8 +26,13 @@ self.addEventListener('install', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-    // Never cache API calls (POST or App Script GETs with token)
-    if (e.request.url.includes('script.google.com') || e.request.url.includes('/api') || e.request.method === 'POST') {
+    // Never cache API calls or external Google image/script redirects
+    if (
+        e.request.url.includes('google.com') ||
+        e.request.url.includes('googleusercontent.com') ||
+        e.request.url.includes('/api') ||
+        e.request.method === 'POST'
+    ) {
         return;
     }
 

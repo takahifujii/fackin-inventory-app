@@ -84,17 +84,26 @@ app.all('/api', async (req, res) => {
          * Older versions of the GAS backend return a comma-separated
          * `photo_urls` string. The newer frontend expects a `photo_meta`
          * array, where each element contains a Google Drive `file_id`
-         * and a proxied URL (`/api/image/<file_id>`). If `photo_meta` is
+         * and a fully-qualified image URL. If `photo_meta` is
          * missing but `photo_urls` is present, extract the file IDs from
-         * each URL and build a `photo_meta` array on the fly. This allows
-         * the frontend to display images without requiring changes to the
-         * GAS backend or the data schema.
+         * each URL and build a `photo_meta` array on the fly. Use the
+         * current request's host and protocol to form absolute URLs so
+         * that images can be fetched from any domain (e.g. when the
+         * frontend and backend are served from different Render
+         * services). This allows the frontend to display images without
+         * requiring changes to the GAS backend or the data schema.
          */
         try {
             if (jsonData && jsonData.status === 'success' && Array.isArray(jsonData.data)) {
+                const protocol = req.protocol;
+                // Determine the host from x-forwarded-host (if behind proxy) or host header.
+                const host = req.headers['x-forwarded-host'] || req.headers.host;
                 jsonData.data = jsonData.data.map(item => {
                     if (!item.photo_meta && item.photo_urls) {
-                        const urls = item.photo_urls.split(',').map(u => u.trim()).filter(Boolean);
+                        const urls = item.photo_urls
+                            .split(',')
+                            .map(u => u.trim())
+                            .filter(Boolean);
                         const photos = [];
                         for (const u of urls) {
                             // Extract the Drive file ID from patterns like
@@ -103,9 +112,11 @@ app.all('/api', async (req, res) => {
                             const match = /id=([^&]+)/.exec(u);
                             const fileId = match ? match[1] : null;
                             if (fileId) {
+                                // Build an absolute URL for the image proxy using the current host and protocol.
+                                const imageUrl = `${protocol}://${host}/api/image/${fileId}`;
                                 photos.push({
                                     file_id: fileId,
-                                    url: `/api/image/${fileId}`,
+                                    url: imageUrl,
                                     name: ''
                                 });
                             }

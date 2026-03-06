@@ -37,7 +37,7 @@ app.all('/api', async (req, res) => {
         // Construct original options
         const fetchOptions = {
             method: req.method,
-            redirect: 'manual',
+            redirect: 'manual', // Prevent header bleed
             headers: {}
         };
 
@@ -65,10 +65,8 @@ app.all('/api', async (req, res) => {
             const redirectUrl = response.headers.get('location');
             console.log(`[Proxy] Following redirect cleanly to: ${redirectUrl.substring(0, 50)}...`);
 
-            // IMPORTANT: Make a pure GET request with NO headers to prevent Google 404 rejections
-            response = await fetch(redirectUrl, {
-                method: 'GET'
-            });
+            // Make a pure GET request with no headers to avoid 404
+            response = await fetch(redirectUrl, { method: 'GET' });
         }
 
         const textData = await response.text();
@@ -82,6 +80,9 @@ app.all('/api', async (req, res) => {
 
         /*
          * Normalize image fields for backward compatibility.
+         * Handles messy cases: photo_meta may be stringified JSON or objects,
+         * photo_urls may be JSON array or comma-separated string, and
+         * file_id may have extra quotes or spaces.
          */
         try {
             if (jsonData && jsonData.status === 'success' && Array.isArray(jsonData.data)) {

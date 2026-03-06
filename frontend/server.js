@@ -28,13 +28,16 @@ app.all('/api', async (req, res) => {
         }
 
         if (!gasUrl) {
-            return res.status(400).json({ status: 'error', data: { error: '設定でWeb App URLを登録してください。(Missing X-GAS-URL)' } });
+            return res.status(400).json({
+                status: 'error',
+                data: { error: '設定でWeb App URLを登録してください。(Missing X-GAS-URL)' }
+            });
         }
 
         // Construct original options
         const fetchOptions = {
             method: req.method,
-            redirect: 'manual', // Do not follow automatically to prevent header bleed bugs in Node native fetch
+            redirect: 'manual', // Prevent header bleed
             headers: {}
         };
 
@@ -62,10 +65,8 @@ app.all('/api', async (req, res) => {
             const redirectUrl = response.headers.get('location');
             console.log(`[Proxy] Following redirect cleanly to: ${redirectUrl.substring(0, 50)}...`);
 
-            // IMPORTANT: Make a pure GET request with NO headers to prevent Google 404 rejections
-            response = await fetch(redirectUrl, {
-                method: 'GET'
-            });
+            // Make a pure GET request with no headers to avoid 404
+            response = await fetch(redirectUrl, { method: 'GET' });
         }
 
         const textData = await response.text();
@@ -74,30 +75,28 @@ app.all('/api', async (req, res) => {
         try {
             jsonData = JSON.parse(textData);
         } catch (e) {
-            // If it's not JSON, return whatever it is
             return res.status(response.status).send(textData);
         }
 
         /*
          * Normalize image fields for backward compatibility.
-         *
-         * Older versions of the GAS backend return a comma-separated
-         * `photo_urls` string. The newer frontend expects a `photo_meta`
-         * array, where each element contains a Google Drive `file_id`
-         * and a fully-qualified image URL. If `photo_meta` is
-         * missing but `photo_urls` is present, extract the file IDs from
-         * each URL and build a `photo_meta` array on the fly. Use the
-         * current request's host and protocol to form absolute URLs so
-         * that images can be fetched from any domain (e.g. when the
-         * frontend and backend are served from different Render
-         * services). This allows the frontend to display images without
-         * requiring changes to the GAS backend or the data schema.
+         * Older versions of the GAS backend return a comma-separated `photo_urls` string.
+         * The frontend expects `photo_meta` array with file_id and absolute URL.
+         * If `photo_meta` is missing but `photo_urls` exists, build `photo_meta` on the fly.
+         * Use x-forwarded-proto (or default to https) and host to create absolute URLs,
+         * so that image links are always HTTPS and avoid mixed-content blocking.
          */
         try {
             if (jsonData && jsonData.status === 'success' && Array.isArray(jsonData.data)) {
-                const protocol = req.protocol;
-                // Determine the host from x-forwarded-host (if behind proxy) or host header.
-                const host = req.headers['x-forwarded-host'] || req.headers.host;
+                // Determine protocol from header or fallback to https
+                const proto =
+                    req.headers['x-forwarded-proto'] ||
+                    req.protocol ||
+                    'https';
+                // Determine host from x-forwarded-host or host header
+                const host =
+                    req.headers['x-forwarded-host'] ||
+                    req.headers.host;
                 jsonData.data = jsonData.data.map(item => {
                     if (!item.photo_meta && item.photo_urls) {
                         const urls = item.photo_urls
@@ -106,14 +105,11 @@ app.all('/api', async (req, res) => {
                             .filter(Boolean);
                         const photos = [];
                         for (const u of urls) {
-                            // Extract the Drive file ID from patterns like
-                            // https://drive.google.com/uc?id=FILE_ID or
-                            // https://drive.google.com/uc?export=view&id=FILE_ID
+                            // Extract the Drive file ID
                             const match = /id=([^&]+)/.exec(u);
                             const fileId = match ? match[1] : null;
                             if (fileId) {
-                                // Build an absolute URL for the image proxy using the current host and protocol.
-                                const imageUrl = `${protocol}://${host}/api/image/${fileId}`;
+                                const imageUrl = `${proto}://${host}/api/image/${fileId}`;
                                 photos.push({
                                     file_id: fileId,
                                     url: imageUrl,
@@ -136,11 +132,14 @@ app.all('/api', async (req, res) => {
 
     } catch (error) {
         console.error('[Proxy Error]:', error);
-        res.status(500).json({ status: 'error', data: { error: error.message } });
+        res.status(500).json({
+            status: 'error',
+            data: { error: error.message }
+        });
     }
 });
 
-// Reverse Proxy for Google Drive Images (Bypasses Browser CORP/CORS restrictions entirely)
+// Reverse Proxy for Google Drive Images (Bypasses CORP/CORS)
 app.get('/api/image/:id', async (req, res) => {
     try {
         const fileId = req.params.id;
@@ -148,7 +147,7 @@ app.get('/api/image/:id', async (req, res) => {
 
         const driveUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
 
-        // Node 18 fetch natively follows redirects up to 20 times by default
+        // Node 18 fetch natively follows redirects
         const response = await fetch(driveUrl);
 
         if (!response.ok) {
@@ -156,13 +155,11 @@ app.get('/api/image/:id', async (req, res) => {
             return res.status(response.status).send('Failed to fetch image');
         }
 
-        // Forward content-type and cache instructions
         const contentType = response.headers.get('content-type') || 'image/jpeg';
         res.setHeader('Content-Type', contentType);
-        res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache aggressively for 1 year
-        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'); // Explicitly authorize usage
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
 
-        // Convert web stream to buffer and send
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
         res.status(200).send(buffer);

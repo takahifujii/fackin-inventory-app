@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { API } from './api';
+import { getLargeCategories, getMediumCategories, getSmallCategories } from './config/categories';
 
 function App() {
     const [currentView, setCurrentView] = useState('view-list');
@@ -24,7 +25,7 @@ function App() {
         } else {
             showToast('通信先が設定されていません (VITE_APP_SCRIPT_URL)', 'error');
         }
-    }, [config.url]); // Sync when url becomes available
+    }, [config.url]);
 
     const showToast = (message, type = 'success') => {
         setToastMessage(message);
@@ -40,7 +41,8 @@ function App() {
                 API.getItems(config),
                 API.getMaster(config)
             ]);
-            setItems(_items || []);
+            const syncTime = Date.now();
+            setItems((_items || []).map(item => ({ ...item, _syncTime: syncTime })));
             setCategories(_master?.categories || []);
             setLocations(_master?.locations || []);
             showToast('データを同期しました');
@@ -59,13 +61,14 @@ function App() {
         setCurrentView('view-list');
     };
 
-    let headerTitle = "FACKIN在庫";
-    if (currentView === 'view-list') headerTitle = "在庫一覧";
-    if (currentView === 'view-form') headerTitle = "新規登録";
-    if (currentView === 'view-settings') headerTitle = "アカウント";
-
     // Consume Modal State
     const [consumeItem, setConsumeItem] = useState(null);
+    const [editingItem, setEditingItem] = useState(null);
+
+    let headerTitle = "FACKIN在庫";
+    if (currentView === 'view-list') headerTitle = "在庫一覧";
+    if (currentView === 'view-form') headerTitle = editingItem ? "在庫編集" : "新規登録";
+    if (currentView === 'view-settings') headerTitle = "アカウント";
 
     return (
         <div className="app-container">
@@ -100,6 +103,10 @@ function App() {
                         categories={categories}
                         locations={locations}
                         onConsume={(item) => setConsumeItem(item)}
+                        onEdit={(item) => {
+                            setEditingItem(item);
+                            setCurrentView('view-form');
+                        }}
                     />
                 )}
 
@@ -108,8 +115,13 @@ function App() {
                         categories={categories}
                         locations={locations}
                         config={config}
-                        onCancel={() => setCurrentView('view-list')}
+                        editItem={editingItem}
+                        onCancel={() => {
+                            setEditingItem(null);
+                            setCurrentView('view-list');
+                        }}
                         onSuccess={() => {
+                            setEditingItem(null);
                             setCurrentView('view-list');
                             syncData();
                         }}
@@ -145,7 +157,10 @@ function App() {
                     <i className="ri-list-check-2"></i>
                     <span>在庫一覧</span>
                 </button>
-                <button className={`nav-item nav-fab ${currentView === 'view-form' ? 'active' : ''}`} onClick={() => setCurrentView('view-form')}>
+                <button className={`nav-item nav-fab ${currentView === 'view-form' ? 'active' : ''}`} onClick={() => {
+                    setEditingItem(null);
+                    setCurrentView('view-form');
+                }}>
                     <div className="fab">
                         <i className="ri-add-line"></i>
                     </div>
@@ -163,25 +178,35 @@ function App() {
 // Components
 // ----------------------------------------------------
 
-function InventoryList({ items, categories, locations, onConsume }) {
+function InventoryList({ items, categories, locations, onConsume, onEdit }) {
     const [search, setSearch] = useState('');
-    const [category, setCategory] = useState('');
+    const [categoryL, setCategoryL] = useState('');
+    const [categoryM, setCategoryM] = useState('');
+    const [categoryS, setCategoryS] = useState('');
     const [location, setLocation] = useState('');
     const [thresholdOnly, setThresholdOnly] = useState(false);
     const [showFilter, setShowFilter] = useState(false);
 
+    const largeCats = getLargeCategories();
+    const mediumCats = getMediumCategories(categoryL);
+    const smallCats = getSmallCategories(categoryL, categoryM);
+
     const filteredItems = items.filter(item => {
         if (item.status === 'archived') return false;
         if (thresholdOnly && (!item.threshold || Number(item.qty) > Number(item.threshold))) return false;
-        if (category && item.category !== category) return false;
+        if (categoryL && item.category_l !== categoryL) return false;
+        if (categoryM && item.category_m !== categoryM) return false;
+        if (categoryS && item.category_s !== categoryS) return false;
         if (location && item.location !== location) return false;
 
         if (search) {
             const q = search.toLowerCase();
             const n = (item.name || '').toLowerCase();
-            const c = (item.category || '').toLowerCase();
-            const l = (item.location || '').toLowerCase();
-            if (!n.includes(q) && !c.includes(q) && !l.includes(q)) return false;
+            const cl = (item.category_l || '').toLowerCase();
+            const cm = (item.category_m || '').toLowerCase();
+            const cs = (item.category_s || '').toLowerCase();
+            const loc = (item.location || '').toLowerCase();
+            if (!n.includes(q) && !cl.includes(q) && !cm.includes(q) && !cs.includes(q) && !loc.includes(q)) return false;
         }
         return true;
     });
@@ -203,10 +228,22 @@ function InventoryList({ items, categories, locations, onConsume }) {
 
             {showFilter && (
                 <div className="filter-panel">
-                    <select value={category} onChange={e => setCategory(e.target.value)}>
-                        <option value="">すべてのカテゴリ</option>
-                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                    <select value={categoryL} onChange={e => { setCategoryL(e.target.value); setCategoryM(''); setCategoryS(''); }}>
+                        <option value="">すべての大分類</option>
+                        {largeCats.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
                     </select>
+                    {categoryL && (
+                        <select value={categoryM} onChange={e => { setCategoryM(e.target.value); setCategoryS(''); }}>
+                            <option value="">すべての中分類</option>
+                            {mediumCats.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                        </select>
+                    )}
+                    {categoryM && (
+                        <select value={categoryS} onChange={e => setCategoryS(e.target.value)}>
+                            <option value="">すべての小分類</option>
+                            {smallCats.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                        </select>
+                    )}
                     <select value={location} onChange={e => setLocation(e.target.value)}>
                         <option value="">すべての場所</option>
                         {locations.map(l => <option key={l} value={l}>{l}</option>)}
@@ -230,13 +267,15 @@ function InventoryList({ items, categories, locations, onConsume }) {
                         const isWarning = item.threshold && Number(item.qty) <= Number(item.threshold);
                         const getDriveDisplayUrl = (url) => {
                             if (!url) return null;
+                            const t = item._syncTime || Date.now();
                             const match = url.match(/id=([a-zA-Z0-9_-]+)/);
-                            // Bypass all Google blocks by downloading the image natively via the Render backend
                             const apiUrlPrefix = import.meta.env.DEV ? 'http://localhost:3000' : 'https://fackin-inventory-app-api.onrender.com';
-                            return match ? `${apiUrlPrefix}/api/image/${match[1]}` : url;
+                            if (match) {
+                                return `${apiUrlPrefix}/api/image/${match[1]}?t=${t}`;
+                            }
+                            return url.includes('?') ? `${url}&t=${t}` : `${url}?t=${t}`;
                         };
 
-                        // Support both the old photo_urls string and the new JSON array photo_meta schema (item.photos)
                         let firstImgRaw = null;
                         if (item.photos && item.photos.length > 0 && item.photos[0] && item.photos[0].url) {
                             firstImgRaw = item.photos[0].url;
@@ -254,14 +293,25 @@ function InventoryList({ items, categories, locations, onConsume }) {
                                 <div className="item-info">
                                     <div className="item-name">{item.name}</div>
                                     <div className="item-meta">
-                                        {item.category && <span className="badge badge-primary">{item.category}</span>}
+                                        {item.category_l && <span className="badge badge-primary">{item.category_l}</span>}
+                                        {item.category_m && <span className="badge badge-primary">{item.category_m}</span>}
+                                        {item.category_s && <span className="badge badge-primary">{item.category_s}</span>}
+                                        {/* Legacy fallback */}
+                                        {!item.category_l && item.category && <span className="badge badge-primary">{item.category}</span>}
                                         {item.location && <span className="badge badge-primary">{item.location}</span>}
                                         {isOut && <span className="badge badge-danger">在庫なし</span>}
                                         {!isOut && isWarning && <span className="badge badge-warning">要発注</span>}
                                     </div>
                                     <div className="item-qty">
                                         <span className={`qty-number ${isOut ? 'empty' : ''}`}>{item.qty} {item.unit}</span>
-                                        <button className="btn-primary btn-consume" disabled={isOut} onClick={() => onConsume(item)}>消費する</button>
+                                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                            <button
+                                                className="btn-secondary btn-consume"
+                                                onClick={() => onEdit(item)}
+                                                style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)' }}
+                                            >編集</button>
+                                            <button className="btn-primary btn-consume" disabled={isOut} onClick={() => onConsume(item)}>消費</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -273,35 +323,49 @@ function InventoryList({ items, categories, locations, onConsume }) {
     );
 }
 
-function ItemForm({ categories, locations, config, onCancel, onSuccess, showToast, setLoading }) {
-    const [photoPreview, setPhotoPreview] = useState(null);
+function ItemForm({ categories, locations, config, onCancel, onSuccess, showToast, setLoading, editItem }) {
+    const [photoPreview, setPhotoPreview] = useState(editItem?.photo_urls ? editItem.photo_urls.split(',')[0] : null);
     const [photoFile, setPhotoFile] = useState(null);
-    const [customCats, setCustomCats] = useState([]);
     const [customLocs, setCustomLocs] = useState([]);
 
     const fileInputRef = useRef(null);
 
     const [formData, setFormData] = useState({
-        name: '',
-        category: '',
-        location: '',
-        qty: 0,
-        unit: '個',
-        threshold: '',
+        name: editItem?.name || '',
+        category_l: editItem?.category_l || '',
+        category_m: editItem?.category_m || '',
+        category_s: editItem?.category_s || '',
+        location: editItem?.location || '',
+        qty: 1,
+        unit: editItem?.unit || '個',
+        threshold: editItem?.threshold || '',
         addIfSameName: true,
-        note: ''
+        note: editItem?.note || ''
     });
 
-    const allCats = Array.from(new Set([...categories, ...customCats]));
     const allLocs = Array.from(new Set([...locations, ...customLocs]));
+
+    const largeCats = getLargeCategories();
+    const mediumCats = getMediumCategories(formData.category_l);
+    const smallCats = getSmallCategories(formData.category_l, formData.category_m);
 
     const handleChange = (e) => {
         const { id, value, type, checked } = e.target;
         const key = id.replace('form-', '');
-        setFormData(prev => ({
-            ...prev,
+
+        let updates = {
             [key === 'add-if-exists' ? 'addIfSameName' : key]: type === 'checkbox' ? checked : value
-        }));
+        };
+
+        // Reset child categories if parent changes
+        if (key === 'category_l') {
+            updates.category_m = '';
+            updates.category_s = '';
+        } else if (key === 'category_m') {
+            updates.category_s = '';
+        }
+
+        setFormData(prev => ({ ...prev, ...updates }));
     };
 
     const handlePhotoSelect = (e) => {
@@ -314,32 +378,48 @@ function ItemForm({ categories, locations, config, onCancel, onSuccess, showToas
 
     const submit = async (e) => {
         e.preventDefault();
+
+        if (!formData.location) {
+            showToast('保管場所を選択してください', 'error');
+            return;
+        }
+
         setLoading(true);
         try {
-            let base64 = await API.fileToBase64(photoFile);
-            base64 = await API.resizeImage(base64, 800);
+            let base64 = null;
+            if (photoFile) {
+                base64 = await API.fileToBase64(photoFile);
+                base64 = await API.resizeImage(base64, 800);
+            }
 
-            await API.createItem({
-                ...formData,
-                photo_base64: base64
-            }, config);
-            showToast('在庫を登録しました');
+            if (editItem) {
+                await API.updateItem({
+                    ...formData,
+                    item_id: editItem.item_id,
+                    photo_base64: base64
+                }, config);
+                showToast('在庫情報を更新しました');
+            } else {
+                await API.createItem({
+                    ...formData,
+                    photo_base64: base64
+                }, config);
+                showToast('在庫を登録しました');
+            }
+
             onSuccess();
         } catch (e) {
-            showToast('登録エラー: ' + e.message, 'error');
+            showToast((editItem ? '更新エラー: ' : '登録エラー: ') + e.message, 'error');
         } finally {
             setLoading(false);
         }
     };
 
     const addMaster = (type) => {
-        const label = type === 'category' ? 'カテゴリ' : '場所';
+        const label = type === 'location' ? '場所' : 'マスター';
         const val = prompt(`新しい${label}を入力してください`);
         if (val) {
-            if (type === 'category') {
-                setCustomCats(prev => [...prev, val]);
-                setFormData(prev => ({ ...prev, category: val }));
-            } else {
+            if (type === 'location') {
                 setCustomLocs(prev => [...prev, val]);
                 setFormData(prev => ({ ...prev, location: val }));
             }
@@ -366,20 +446,25 @@ function ItemForm({ categories, locations, config, onCancel, onSuccess, showToas
 
                 <div className="form-row">
                     <div className="form-group">
-                        <label htmlFor="form-category">カテゴリ</label>
-                        <div className="input-with-action">
-                            <select id="form-category" value={formData.category} onChange={handleChange}>
-                                <option value="">未指定</option>
-                                {allCats.map(c => <option key={c} value={c}>{c}</option>)}
-                            </select>
-                            <button type="button" className="btn-text-small" onClick={() => addMaster('category')}>+ 追加</button>
-                        </div>
+                        <label>カテゴリ</label>
+                        <select id="form-category_l" value={formData.category_l} onChange={handleChange} style={{ marginBottom: '0.5rem' }}>
+                            <option value="">大分類を選択</option>
+                            {largeCats.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                        </select>
+                        <select id="form-category_m" value={formData.category_m} onChange={handleChange} style={{ marginBottom: '0.5rem' }} disabled={!formData.category_l}>
+                            <option value="">中分類を選択</option>
+                            {mediumCats.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                        </select>
+                        <select id="form-category_s" value={formData.category_s} onChange={handleChange} disabled={!formData.category_m}>
+                            <option value="">小分類を選択</option>
+                            {smallCats.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                        </select>
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="form-location">保管場所</label>
+                        <label htmlFor="form-location">保管場所<span className="required">*</span></label>
                         <div className="input-with-action">
-                            <select id="form-location" value={formData.location} onChange={handleChange}>
+                            <select id="form-location" value={formData.location} onChange={handleChange} required>
                                 <option value="">未指定</option>
                                 {allLocs.map(l => <option key={l} value={l}>{l}</option>)}
                             </select>
@@ -389,10 +474,12 @@ function ItemForm({ categories, locations, config, onCancel, onSuccess, showToas
                 </div>
 
                 <div className="form-row">
-                    <div className="form-group">
-                        <label htmlFor="form-qty">数量<span className="required">*</span></label>
-                        <input type="number" id="form-qty" required min="0" value={formData.qty} onChange={handleChange} />
-                    </div>
+                    {!editItem && (
+                        <div className="form-group">
+                            <label htmlFor="form-qty">数量<span className="required">*</span></label>
+                            <input type="number" id="form-qty" required min="1" value={formData.qty} onChange={handleChange} />
+                        </div>
+                    )}
                     <div className="form-group">
                         <label htmlFor="form-unit">単位</label>
                         <input type="text" id="form-unit" value={formData.unit} onChange={handleChange} placeholder="例：個, m, 箱" />
@@ -404,12 +491,14 @@ function ItemForm({ categories, locations, config, onCancel, onSuccess, showToas
                     <input type="number" id="form-threshold" min="0" value={formData.threshold} onChange={handleChange} placeholder="例：5" />
                 </div>
 
-                <div className="form-group">
-                    <label className="checkbox-label">
-                        <input type="checkbox" id="form-add-if-exists" checked={formData.addIfSameName} onChange={handleChange} />
-                        同名があれば「加算」する
-                    </label>
-                </div>
+                {!editItem && (
+                    <div className="form-group">
+                        <label className="checkbox-label">
+                            <input type="checkbox" id="form-add-if-exists" checked={formData.addIfSameName} onChange={handleChange} />
+                            同名があれば「加算」する
+                        </label>
+                    </div>
+                )}
 
                 <div className="form-group">
                     <label htmlFor="form-note">メモ</label>
@@ -418,7 +507,7 @@ function ItemForm({ categories, locations, config, onCancel, onSuccess, showToas
 
                 <div className="form-actions">
                     <button type="button" className="btn-secondary" onClick={onCancel}>キャンセル</button>
-                    <button type="submit" className="btn-primary">登録する</button>
+                    <button type="submit" className="btn-primary">{editItem ? '更新する' : '登録する'}</button>
                 </div>
             </form>
         </div>

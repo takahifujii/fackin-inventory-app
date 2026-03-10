@@ -28,7 +28,8 @@ export const API = {
         if (method === 'GET') {
             const params = new URLSearchParams({
                 action: action,
-                token: cleanToken
+                token: cleanToken,
+                _t: Date.now()
             });
             if (payload?.id) params.append('id', payload.id);
             if (payload?.item_id) params.append('item_id', payload.item_id);
@@ -81,6 +82,11 @@ export const API = {
     createItem: (itemData, config) => {
         itemData.user = config.user;
         return API.request('createItem', 'POST', itemData, config);
+    },
+
+    updateItem: (itemData, config) => {
+        itemData.user = config.user;
+        return API.request('updateItem', 'POST', itemData, config);
     },
 
     consumeItem: (itemId, consumeQty, note, config) => {

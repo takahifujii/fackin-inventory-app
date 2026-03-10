@@ -2,6 +2,106 @@ import React, { useState, useEffect, useRef } from 'react';
 import { API } from './api';
 import { getLargeCategories, getMediumCategories, getSmallCategories } from './config/categories';
 
+const CORRECT_PIN = import.meta.env.VITE_APP_PIN || '1234';
+const AUTH_KEY = 'fackin_auth_ok';
+
+function PinAuth({ onAuth }) {
+    const [input, setInput] = useState('');
+    const [error, setError] = useState(false);
+    const [shake, setShake] = useState(false);
+
+    const press = (digit) => {
+        if (input.length >= CORRECT_PIN.length) return;
+        const next = input + digit;
+        setInput(next);
+        setError(false);
+
+        if (next.length === CORRECT_PIN.length) {
+            setTimeout(() => {
+                if (next === CORRECT_PIN) {
+                    localStorage.setItem(AUTH_KEY, 'true');
+                    onAuth();
+                } else {
+                    setShake(true);
+                    setError(true);
+                    setTimeout(() => {
+                        setInput('');
+                        setShake(false);
+                    }, 700);
+                }
+            }, 100);
+        }
+    };
+
+    const del = () => setInput(prev => prev.slice(0, -1));
+
+    const dots = Array.from({ length: CORRECT_PIN.length }, (_, i) => (
+        <div key={i} style={{
+            width: 18, height: 18, borderRadius: '50%',
+            background: i < input.length ? 'var(--accent)' : 'transparent',
+            border: '2px solid var(--accent)',
+            transition: 'background 0.15s'
+        }} />
+    ));
+
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
+
+    return (
+        <div style={{
+            minHeight: '100dvh', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            background: 'var(--bg-primary)', padding: '2rem'
+        }}>
+            <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔒</div>
+                <h2 style={{ color: 'var(--text-primary)', margin: 0 }}>FACKIN在庫</h2>
+                <p style={{ color: 'var(--text-secondary)', margin: '0.5rem 0 0' }}>PINコードを入力してください</p>
+            </div>
+
+            <div style={{
+                display: 'flex', gap: '1rem', marginBottom: '2rem',
+                animation: shake ? 'shake 0.4s ease' : 'none'
+            }}>
+                {dots}
+            </div>
+
+            {error && (
+                <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '1rem' }}>PINが違います</p>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 72px)', gap: '0.75rem' }}>
+                {keys.map((k, i) => k === '' ? <div key={i} /> : (
+                    <button key={i} onClick={() => k === '⌫' ? del() : press(k)}
+                        style={{
+                            height: 72, borderRadius: 16,
+                            background: k === '⌫' ? 'var(--bg-secondary)' : 'var(--bg-card)',
+                            border: '1px solid var(--border-color)',
+                            color: 'var(--text-primary)',
+                            fontSize: k === '⌫' ? '1.2rem' : '1.5rem',
+                            fontWeight: 600, cursor: 'pointer',
+                            transition: 'transform 0.1s, background 0.1s'
+                        }}
+                    >{k}</button>
+                ))}
+            </div>
+
+            <style>{`@keyframes shake {
+                0%,100%{transform:translateX(0)}
+                20%{transform:translateX(-8px)}
+                40%{transform:translateX(8px)}
+                60%{transform:translateX(-6px)}
+                80%{transform:translateX(6px)}
+            }`}</style>
+        </div>
+    );
+}
+
+function Root() {
+    const [authed, setAuthed] = useState(localStorage.getItem(AUTH_KEY) === 'true');
+    if (!authed) return <PinAuth onAuth={() => setAuthed(true)} />;
+    return <App />;
+}
+
 function App() {
     const [currentView, setCurrentView] = useState('view-list');
     const [loading, setLoading] = useState(false);
@@ -586,4 +686,5 @@ function ConsumeModal({ item, onClose, config, setLoading, showToast, onSuccess 
     );
 }
 
+export { Root };
 export default App;

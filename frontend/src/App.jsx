@@ -54,7 +54,7 @@ function PinAuth({ onAuth }) {
         }}>
             <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔒</div>
-                <h2 style={{ color: 'var(--text-primary)', margin: 0 }}>FACKIN在庫</h2>
+                <h2 style={{ color: 'var(--text-primary)', margin: 0 }}>Entrez! Stock</h2>
                 <p style={{ color: 'var(--text-secondary)', margin: '0.5rem 0 0' }}>PINコードを入力してください</p>
             </div>
 
@@ -165,7 +165,7 @@ function App() {
     const [consumeItem, setConsumeItem] = useState(null);
     const [editingItem, setEditingItem] = useState(null);
 
-    let headerTitle = "FACKIN在庫";
+    let headerTitle = "Entrez! Stock";
     if (currentView === 'view-list') headerTitle = "在庫一覧";
     if (currentView === 'view-form') headerTitle = editingItem ? "在庫編集" : "新規登録";
     if (currentView === 'view-settings') headerTitle = "アカウント";

@@ -1,6 +1,6 @@
 {
-  "name": "FACKIN在庫管理",
-  "short_name": "FACKIN在庫",
+  "name": "Entrez! Stock",
+  "short_name": "E! Stock",
   "description": "スマホで簡単に在庫・資材管理ができるPWA",
   "start_url": "./index.html",
   "display": "standalone",

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { API } from './api';
 import { getLargeCategories, getMediumCategories, getSmallCategories } from './config/categories';
 
-const CORRECT_PIN = import.meta.env.VITE_APP_PIN || '1234';
+const CORRECT_PIN = import.meta.env.VITE_APP_PIN || '9999';
 const AUTH_KEY = 'fackin_auth_ok';
 
 function PinAuth({ onAuth }) {

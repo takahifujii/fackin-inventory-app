@@ -19,7 +19,9 @@ const SPREADSHEET_ID = "19sE_E5Osly9qNntKouQEGhNLcfN6re19woh7AataE2M";
 const itemsColumns = [
   "item_id",
   "name",
-  "category",
+  "category_l",
+  "category_m",
+  "category_s",
   "location",
   "qty",
   "unit",
@@ -182,7 +184,9 @@ function createItem(payload) {
 
   const {
     name,
-    category,
+    category_l,
+    category_m,
+    category_s,
     location,
     qty,
     unit,
@@ -218,7 +222,9 @@ function createItem(payload) {
   const newItem = {
     item_id: Utilities.getUuid(),
     name: name,
-    category: category || "",
+    category_l: category_l || "",
+    category_m: category_m || "",
+    category_s: category_s || "",
     location: location || "",
     qty: toInt(qty),
     unit: unit || "個",
@@ -287,7 +293,9 @@ function updateItem(payload) {
   const {
     item_id,
     name,
-    category,
+    category_l,
+    category_m,
+    category_s,
     location,
     unit,
     threshold,
@@ -317,7 +325,9 @@ function updateItem(payload) {
 
   updateRowInSheet(sheet, "item_id", item_id, {
     name: name !== undefined ? name : existing.name,
-    category: category !== undefined ? category : existing.category,
+    category_l: category_l !== undefined ? category_l : (existing.category_l || ""),
+    category_m: category_m !== undefined ? category_m : (existing.category_m || ""),
+    category_s: category_s !== undefined ? category_s : (existing.category_s || ""),
     location: location !== undefined ? location : existing.location,
     unit: unit !== undefined ? unit : existing.unit,
     threshold:

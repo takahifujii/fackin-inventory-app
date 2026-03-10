@@ -6,7 +6,7 @@ export const API = {
 
         // S2S(サーバー間通信)回避策: SafariIのITPブロックを防ぐため、
         // 自分のNode.jsサーバー(Render)の/apiエンドポイントを叩き、そこからGASに転送させる
-        let url = import.meta.env.DEV && config.url ? config.url : 'https://fackin-inventory-app-api.onrender.com/api';
+        let url = import.meta.env.DEV && config.url ? config.url : '/api';
 
         // Header values cannot contain newlines or trailing spaces, else Safari throws "DOMException: The string did not match the expected pattern"
         const cleanUrl = config.url ? config.url.trim() : '';

@@ -1,19 +1,9 @@
 // sw.js
-const CACHE_NAME = 'inventory-app-v10';
+const CACHE_NAME = 'inventory-app-v11';
 const ASSETS = [
     './',
     './index.html',
-    './manifest.json',
-    './css/variables.css',
-    './css/globals.css',
-    './css/components.css',
-    './css/layout.css',
-    './js/config.js',
-    './js/api.js',
-    './js/ui.js',
-    './js/app.js',
-    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
-    'https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css'
+    './manifest.json'
 ];
 
 self.addEventListener('install', (e) => {

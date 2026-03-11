@@ -9,8 +9,8 @@ export default defineConfig({
             registerType: 'autoUpdate',
             includeAssets: ['icons/icon-192x192.png', 'icons/icon-512x512.png'],
             manifest: {
-                name: 'FACKIN在庫管理',
-                short_name: 'FACKIN在庫',
+                name: 'Entrez! Stock',
+                short_name: 'E! Stock',
                 description: 'スマホで簡単に在庫・資材管理ができるPWA',
                 theme_color: '#1E293B',
                 background_color: '#0F172A',

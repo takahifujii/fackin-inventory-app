@@ -3,9 +3,6 @@
     flex-direction: column;
     height: 100vh;
     height: 100dvh;
-    /* Handle iOS safe areas globally for the container */
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
 }
 
 .app-header {
@@ -18,8 +15,10 @@
     justify-content: space-between;
     padding-left: 1rem;
     padding-right: 1rem;
+    /* iOS safe area: push content down below status bar */
+    margin-top: env(safe-area-inset-top);
     position: fixed;
-    top: env(safe-area-inset-top);
+    top: 0;
     left: 0;
     width: 100%;
     z-index: 100;
@@ -43,7 +42,7 @@
 .app-content {
     flex: 1;
     overflow-y: auto;
-    padding-top: calc(var(--header-height) + 1rem);
+    padding-top: calc(var(--header-height) + env(safe-area-inset-top) + 1rem);
     padding-bottom: calc(var(--nav-height) + 1rem);
     padding-left: 1rem;
     padding-right: 1rem;
@@ -73,10 +72,9 @@
 /* Bottom Navigation */
 .bottom-nav {
     position: fixed;
-    bottom: env(safe-area-inset-bottom);
+    bottom: 0;
     left: 0;
     width: 100%;
-    height: var(--nav-height);
     background-color: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -84,6 +82,8 @@
     display: flex;
     justify-content: space-around;
     align-items: center;
+    padding-top: 0.5rem;
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
     z-index: 100;
 }
 

@@ -287,9 +287,11 @@ function InventoryList({ items, categories, locations, onConsume, onEdit }) {
     const [thresholdOnly, setThresholdOnly] = useState(false);
     const [showFilter, setShowFilter] = useState(false);
 
-    const largeCats = getLargeCategories();
-    const mediumCats = getMediumCategories(categoryL);
-    const smallCats = getSmallCategories(categoryL, categoryM);
+    // 実際のitemsデータから動的にカテゴリ選択肢を生成（マスターとのズレを防ぐ）
+    const activeItems = items.filter(i => i.status !== 'archived');
+    const largeCats = [...new Set(activeItems.map(i => i.category_l).filter(Boolean))].sort();
+    const mediumCats = [...new Set(activeItems.filter(i => !categoryL || i.category_l === categoryL).map(i => i.category_m).filter(Boolean))].sort();
+    const smallCats = [...new Set(activeItems.filter(i => (!categoryL || i.category_l === categoryL) && (!categoryM || i.category_m === categoryM)).map(i => i.category_s).filter(Boolean))].sort();
 
     const filteredItems = items.filter(item => {
         if (item.status === 'archived') return false;
@@ -330,18 +332,18 @@ function InventoryList({ items, categories, locations, onConsume, onEdit }) {
                 <div className="filter-panel">
                     <select value={categoryL} onChange={e => { setCategoryL(e.target.value); setCategoryM(''); setCategoryS(''); }}>
                         <option value="">すべての大分類</option>
-                        {largeCats.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                        {largeCats.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                     {categoryL && (
                         <select value={categoryM} onChange={e => { setCategoryM(e.target.value); setCategoryS(''); }}>
                             <option value="">すべての中分類</option>
-                            {mediumCats.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                            {mediumCats.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                     )}
                     {categoryM && (
                         <select value={categoryS} onChange={e => setCategoryS(e.target.value)}>
                             <option value="">すべての小分類</option>
-                            {smallCats.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                            {smallCats.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                     )}
                     <select value={location} onChange={e => setLocation(e.target.value)}>
